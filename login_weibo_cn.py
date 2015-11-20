@@ -96,9 +96,6 @@ class WeiboConnector(object):
 class getInfo(object):
     def __init__(self,Connector,uid):
         self.__uid = uid
-        # self.__con = WeiboConnector('xbdtnk89@mail.bccto.me', 'xbdtnk89')
-        # self.__con = WeiboConnector('461445957@qq.com', 'lovejei')
-        # self.__con = WeiboConnector('weilidian@126.com', 'z123456')
         self.__con=Connector
         self.user_basic_info=self.getBasicInfo()
         self.attends=self.getAttends(self.user_basic_info['containerid'])
