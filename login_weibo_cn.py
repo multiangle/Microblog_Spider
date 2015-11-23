@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import json
 import re
 import queue
+import time
 
 class WeiboConnector(object):
     """
@@ -20,37 +21,81 @@ class WeiboConnector(object):
 
     def __init__(self, nickname, pwd):
 
+        self.nickname=nickname
+        self.pwd=pwd
+
         self.__header = {'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 8_0 like Mac OS X) '
                                        'AppleWebKit/600.1.3 (KHTML, like Gecko) Version/8.0 Mobile/12A4345d Safari/600.1.4'}
         self.__cj = http.cookiejar.CookieJar()
 
-        self.proxy_manager=proxy_manager(1)
-        self.current_proxy=self.proxy_manager.request_proxy(1)[0]
+        self.proxy_manager=proxy_manager(10)
+        # self.current_proxy=self.proxy_manager.request_proxy(1)[0]
+        self.current_proxy='120.195.195.6:80'
         self.proxy_handler=request.ProxyHandler({'http':self.current_proxy})
         # proxy_auth_handler=request.ProxyBasicAuthHandler()
-
+        print('current proxy: ',self.current_proxy)
         self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
+        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
         self.__login_url = 'http://login.weibo.cn/login/'
 
         request.install_opener(self.opener)
 
         self.__login(nickname, pwd)
 
-    def getData(self, url):
-        req = request.Request(url, headers=self.__header)
-        result = self.opener.open(req)
-        # print(result.read())
-        return result.read().decode('utf-8')
-
-    def postData(self, url, data):
+    def getData(self, url,timeout=5,reconn_num=3,proxy_num=5):
         try:
-            data = parse.urlencode(data).encode('utf-8')
-            req = request.Request(url, data, headers=self.__header)
-            result = self.opener.open(req)
-            return result.read().decode('utf-8')
+            result=self.__getData_inner(url,timeout=timeout)
+            return result
         except Exception as e:
-            print("请求异常，urls" + url)
+            print('*** connect fail,ready to reconnect ***')
+            print('reason: ',e)
+            proxy_count=1
+            while(proxy_count<=proxy_num):
+                reconn_count=1
+                while (reconn_count<=reconn_num):
+                    print('--- the ',reconn_count,'th reconnect ---')
+                    try:
+                        result=self.__getData_inner(url,timeout=timeout)
+                        return result
+                    except:
+                        reconn_count+=1
+                print('*** reconnect fail, ready to change proxy ***')
+                self.change_proxy()
+                print('--- change proxy for ',proxy_count,' times ---')
+                self.__login(self.nickname,self.pwd)
+                proxy_count+=1
+            raise StopIteration('*** run out of reconn and proxy times, ')
+
+    def __getData_inner(self,url,timeout=20):
+        req = request.Request(url, headers=self.__header)
+        time.sleep(0.3)
+        result = self.opener.open(req,timeout=timeout)
+        return result.read().decode('utf-8')
+        # print(result.read())
+
+    def postData(self, url, data,timeout=20):
+        try:
+            res=self.__postData_inner(url,data,timeout=timeout)
+            return res
+        except Exception as e:
+            print("Request Error，urls" + url)
             print(e)
+            proxy_count=1
+            while (proxy_count<10):
+                self.change_proxy()
+                print('--- change proxy in post for ',proxy_count,' times ---')
+                try:
+                    res=self.postData(url,data,timeout=timeout)
+                    return res
+                except:
+                    proxy_count+=1
+            raise StopIteration('*** unable to post data ***')
+
+    def __postData_inner(self,url,data,timeout=20):
+        data = parse.urlencode(data).encode('utf-8')
+        req = request.Request(url, data, headers=self.__header)
+        result = self.opener.open(req,timeout=timeout)
+        return result.read().decode('utf-8')
 
     def __login(self, nickname, pwd):
         print('......Login ing......')
@@ -87,7 +132,8 @@ class WeiboConnector(object):
             exit(0)
 
     def change_proxy(self):
-        self.current_proxy=self.proxy_manager.request_proxy(1,drop=[self.current_proxy])
+        self.current_proxy=self.proxy_manager.request_proxy(1,drop=[self.current_proxy])[0]
+        print('--- change proxy to ',self.current_proxy,' --- ')
         self.__cj = http.cookiejar.CookieJar()
         proxy_handler=request.ProxyHandler({'http':self.current_proxy})
         self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),proxy_handler)
@@ -171,7 +217,15 @@ class getInfo(object):
         for i in range(constrain):
             follower_url = 'http://m.weibo.cn/page/tpl?containerid='+str(container_id)+'_-_FOLLOWERS'+'&page='+str(i)
             page = self.__con.getData(follower_url)
-            page=re.findall(r'"card_group":.+?]}]',page)[0]
+            try:
+                e_page=json.loads(page[1:page.__len__()-1])
+                print(e_page)
+            except:
+                pass
+            try:
+                page=re.findall(r'"card_group":.+?]}]',page)[0]
+            except:
+                print(page)
             page='{'+page[:page.__len__()-1]
             page=json.loads(page)
             temp_list=[self.card_group_item_parse(x) for x in page['card_group']]
@@ -299,6 +353,7 @@ class proxy_manager():
         except Exception as e:
             print("!!!ERROR!!! Unable to get proxy from daili666api",e)
 
+
     def request_proxy(self,num,drop=[],rtn=[]):
         # check if the input is valid
         if not isinstance(drop,list):
@@ -349,6 +404,11 @@ class proxy_manager():
             del(self.__proxy_list[index])
             del(self.__proxy_state[index])
 
+# class proxy_manager2():
+#     def __init__(self):
+#         self.current_page=1
+
+
 
 if __name__ == '__main__':
     # test = getInfor(1496822520)
@@ -357,7 +417,7 @@ if __name__ == '__main__':
     res=getInfo(Connector=con,uid=1496822520)
     for i in res.attends:
         print(i['name'],'\t',i['id'],'\t',i['fans_num'])
-    #for test2
+
 
 
 
