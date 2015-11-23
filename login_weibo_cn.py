@@ -357,7 +357,7 @@ if __name__ == '__main__':
     res=getInfo(Connector=con,uid=1496822520)
     for i in res.attends:
         print(i['name'],'\t',i['id'],'\t',i['fans_num'])
-
+    #for test
 
 
 
