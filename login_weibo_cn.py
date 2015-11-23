@@ -1,4 +1,4 @@
-__author__ = 'Herbert'
+__author__ = 'multiangle'
 
 """
 loginin to weibo.cn via python
