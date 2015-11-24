@@ -28,21 +28,22 @@ class WeiboConnector(object):
                                        'AppleWebKit/600.1.3 (KHTML, like Gecko) Version/8.0 Mobile/12A4345d Safari/600.1.4'}
         self.__cj = http.cookiejar.CookieJar()
 
-        self.proxy_manager=proxy_manager(10)
+        # self.proxy_manager=proxy_manager(10)
+        self.proxy_manager=None
         # self.current_proxy=self.proxy_manager.request_proxy(1)[0]
         self.current_proxy='120.195.195.6:80'
         self.proxy_handler=request.ProxyHandler({'http':self.current_proxy})
         # proxy_auth_handler=request.ProxyBasicAuthHandler()
         print('current proxy: ',self.current_proxy)
-        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
-        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
+        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
+        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
         self.__login_url = 'http://login.weibo.cn/login/'
 
         request.install_opener(self.opener)
 
         self.__login(nickname, pwd)
 
-    def getData(self, url,timeout=5,reconn_num=3,proxy_num=5):
+    def getData(self, url,timeout=8,reconn_num=5,proxy_num=5):
         try:
             result=self.__getData_inner(url,timeout=timeout)
             return result
@@ -68,7 +69,7 @@ class WeiboConnector(object):
 
     def __getData_inner(self,url,timeout=20):
         req = request.Request(url, headers=self.__header)
-        time.sleep(0.3)
+        time.sleep(0.4)
         result = self.opener.open(req,timeout=timeout)
         return result.read().decode('utf-8')
         # print(result.read())
@@ -217,20 +218,40 @@ class getInfo(object):
         for i in range(constrain):
             follower_url = 'http://m.weibo.cn/page/tpl?containerid='+str(container_id)+'_-_FOLLOWERS'+'&page='+str(i)
             page = self.__con.getData(follower_url)
-            try:
-                e_page=json.loads(page[1:page.__len__()-1])
-                print(e_page)
-            except:
-                pass
-            try:
+            try:                     #第一次获取页面，获得不正常页面，解析失败
                 page=re.findall(r'"card_group":.+?]}]',page)[0]
-            except:
-                print(page)
-            page='{'+page[:page.__len__()-1]
-            page=json.loads(page)
-            temp_list=[self.card_group_item_parse(x) for x in page['card_group']]
-            attends_list=attends_list+temp_list
-            print('Page ',i,' is done')
+                page='{'+page[:page.__len__()-1]
+                page=json.loads(page)
+                temp_list=[self.card_group_item_parse(x) for x in page['card_group']]
+                attends_list=attends_list+temp_list
+                print('Page ',i,' is done')
+
+            except Exception as e:
+                print(e)
+                try:                #分析是否是因为 “没有内容” 出错，如果是，当前的应对措施是休眠5秒，再次请求。
+                    page=page.strip()
+                    page="{\"test\":"+page+"}"
+                    data=json.loads(page)
+                    if data['test'][1]['msg']=='没有内容':
+                        time.sleep(5)
+                        print('--- fail to get valid page, sleep for 5 seconds ---')
+                        page = self.__con.getData(follower_url)
+                        try:
+                            page=re.findall(r'"card_group":.+?]}]',page)[0]
+                            page='{'+page[:page.__len__()-1]
+                            page=json.loads(page)
+                            temp_list=[self.card_group_item_parse(x) for x in page['card_group']]
+                            attends_list=attends_list+temp_list
+                            print('Page ',i,' is done')
+                        except:
+                            pass    #如果再次失败，当前措施是直接跳过
+
+                except Exception as e:  #如果不是因为 “没有内容出错” 则出错原因不明，直接跳过
+                    print(e)
+                    print('*** ERROR: Unknown page type, fail to parse *** :',follower_url)
+                    print(page)
+                    print('--- skip this page ---')
+                    pass
         return attends_list
 
     def getFans(self,container_id,constrain=200):
@@ -248,7 +269,6 @@ class getInfo(object):
                     print(x['name'],'\t',count)
             except Exception as e:
                 print(e)
-
 
     def getfolloweruid(self, req_url):
         res = self.__con.getData(req_url)
@@ -296,6 +316,7 @@ class getInfo(object):
         user_basic_info['basic_page']='http://m.weibo.cn/u/'+str(user_basic_info['uid'])
         print('\n','CURRENT USER INFO ','\n','Name:',user_basic_info['name'],'\t','Fans Num:',user_basic_info['fans_num'],'\t',
               'Attens Num:',user_basic_info['attends_num'],'\t','Blog Num:',user_basic_info['blog_num'],'\n',
+              'Atten Page Num:',int(user_basic_info['attends_num']/10),'\n',
               'description:',user_basic_info['description']
         )
         return user_basic_info
@@ -416,8 +437,8 @@ if __name__ == '__main__':
     con=WeiboConnector('weilidian@126.com', 'z123456')
     res=getInfo(Connector=con,uid=1496822520)
     for i in res.attends:
-        print(i['name'],'\t',i['id'],'\t',i['fans_num'])
-
+        print(i['name'],'\t',i['uid'],'\t',i['fans_num'],'\t',i['attends_num'])
+    print('hehe')
 
 
 
