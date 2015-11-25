@@ -3,7 +3,7 @@ __author__ = 'multiangle'
 import pymysql
 
 class MySQL_Interface:
-    def __init__(self,host='127.0.0.1',user='root',pwd='',dbname='alibigdata'):
+    def __init__(self,host='127.0.0.1',user='root',pwd='',dbname='microblog_spider'):
         self.host=host
         self.user=user
         self.passwd=pwd
@@ -198,6 +198,8 @@ class MySQL_Interface:
     def code_transform(self,strText,codec='gb2312'):
         b = bytes((ord(i) for i in strText))
         return b.decode(codec)
+
+
 
 if __name__=='__main__':
     mi=MySQL_Interface(dbname='test')

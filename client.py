@@ -1,5 +1,11 @@
 __author__ = 'multiangle'
 
+"""
+-------------------------------------
+The client of the microblog_spider...
+_____________________________________
+"""
+
 import http.cookiejar
 import urllib.request as request
 import urllib.parse as parse
@@ -37,6 +43,7 @@ class WeiboConnector(object):
         request.install_opener(self.opener)
 
         self.__login(nickname, pwd)
+        self.error_log=[]       #错误日志
 
     def getData(self, url,timeout=8,reconn_num=5,proxy_num=5):
         try:
@@ -142,6 +149,8 @@ class getInfo(object):
         self.user_basic_info=self.getBasicInfo()
         self.attends=self.getAttends(self.user_basic_info['containerid'])
         # self.getFans('1005051496822520')
+        self.filtered_attends=[x for x in self.attends if x['fans_num']>10000]
+        self.error_log=[]
 
     def card_group_item_parse(self,sub_block):
         """
