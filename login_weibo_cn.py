@@ -425,6 +425,8 @@ class proxy_manager():
             del(self.__proxy_list[index])
             del(self.__proxy_state[index])
 
+class Control():
+    pass
 # class proxy_manager2():
 #     def __init__(self):
 #         self.current_page=1
