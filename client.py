@@ -31,13 +31,13 @@ class WeiboConnector(object):
 
         self.proxy_manager=proxy_manager(40)
         # self.proxy_manager=None
-        self.current_proxy=self.proxy_manager.request_proxy(1)[0]
-        # self.current_proxy='120.195.195.6:80'
+        # self.current_proxy=self.proxy_manager.request_proxy(1)[0]
+        self.current_proxy='120.195.195.6:80'
         self.proxy_handler=request.ProxyHandler({'http':self.current_proxy})
         # proxy_auth_handler=request.ProxyBasicAuthHandler()
         print('current proxy: ',self.current_proxy)
-        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
-        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
+        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
+        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
         self.__login_url = 'http://login.weibo.cn/login/'
 
         request.install_opener(self.opener)
@@ -432,7 +432,7 @@ class proxy_manager():
 
 if __name__ == '__main__':
     con=WeiboConnector('weilidian@126.com', 'z123456')
-    res=getInfo(Connector=con,uid=1496822520)
+    res=getInfo(Connector=con,uid=1221171697)
     # for i in res.attends:
     #     print(i['name'],'\t',i['uid'],'\t',i['fans_num'],'\t')
     print('Done Successfully')

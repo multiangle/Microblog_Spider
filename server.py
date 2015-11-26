@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from File_Interface import save_pickle,load_pickle
-from config import mysql_config,conn_query,ready_to_get,user_info_table
+from config import mysql_config,conn_query,ready_to_get,user_info_table,Base
 
 from client import WeiboConnector,getInfo
 
@@ -28,14 +28,15 @@ class Control():
         self.session.close()
 
     def create_table(self):
-        pass
+        Base.metadata.create_all(self.engine,checkfirst=True)
 
     def start_up(self):    #获取存在数据库中的待处理列表
         self.init_uid=self.session.query(ready_to_get).all()[0:5]
         print(self.init_uid)
 
     def execute(self):
-        self.conn=WeiboConnector('weilidian@126.com', 'z123456')
+        # self.conn=WeiboConnector('weilidian@126.com', 'z123456')
+        self.conn=WeiboConnector('shalv4848@163.com','8rr77b')
         while(True):
             current_user=self.session.query(ready_to_get).all()[0]
             uid=current_user.uid
