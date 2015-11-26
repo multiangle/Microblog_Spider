@@ -34,7 +34,7 @@ class ready_to_get(Base):
     description=Column(String)
     fans_num=Column(Integer)
     def __repr__(self):
-        return('<user_info(name=%s,gender=%s,description=%s ,fans num=%s ,blog num=%s, '
+        return('<ready_to_get(name=%s,gender=%s,description=%s ,fans num=%s ,blog num=%s, '
                'basic page=%s , uid=%s)>'%(self.name,self.gender,self.description,self.fans_num,
         self.blog_num,self.basic_page,self.uid))
 

@@ -29,15 +29,15 @@ class WeiboConnector(object):
                                        'AppleWebKit/600.1.3 (KHTML, like Gecko) Version/8.0 Mobile/12A4345d Safari/600.1.4'}
         self.__cj = http.cookiejar.CookieJar()
 
-        # self.proxy_manager=proxy_manager(10)
-        self.proxy_manager=None
-        # self.current_proxy=self.proxy_manager.request_proxy(1)[0]
-        self.current_proxy='120.195.195.6:80'
+        self.proxy_manager=proxy_manager(40)
+        # self.proxy_manager=None
+        self.current_proxy=self.proxy_manager.request_proxy(1)[0]
+        # self.current_proxy='120.195.195.6:80'
         self.proxy_handler=request.ProxyHandler({'http':self.current_proxy})
         # proxy_auth_handler=request.ProxyBasicAuthHandler()
         print('current proxy: ',self.current_proxy)
-        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
-        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
+        self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj),self.proxy_handler)
+        # self.opener = request.build_opener(request.HTTPCookieProcessor(self.__cj))
         self.__login_url = 'http://login.weibo.cn/login/'
 
         request.install_opener(self.opener)
@@ -45,7 +45,7 @@ class WeiboConnector(object):
         self.__login(nickname, pwd)
         self.error_log=[]       #错误日志
 
-    def getData(self, url,timeout=8,reconn_num=5,proxy_num=5):
+    def getData(self, url,timeout=5,reconn_num=3,proxy_num=5):
         try:
             result=self.__getData_inner(url,timeout=timeout)
             return result
@@ -71,7 +71,7 @@ class WeiboConnector(object):
 
     def __getData_inner(self,url,timeout=20):
         req = request.Request(url, headers=self.__header)
-        time.sleep(0.4)
+        time.sleep(0.2)
         result = self.opener.open(req,timeout=timeout)
         return result.read().decode('utf-8')
         # print(result.read())
@@ -147,7 +147,7 @@ class getInfo(object):
         self.__uid = str(uid)
         self.__con=Connector
         self.user_basic_info=self.getBasicInfo()
-        self.attends=self.getAttends(self.user_basic_info['containerid'])
+        self.attends=self.getAttends(self.user_basic_info['container_id'])
         # self.getFans('1005051496822520')
         self.filtered_attends=[x for x in self.attends if x['fans_num']>10000]
         self.error_log=[]
@@ -288,7 +288,7 @@ class getInfo(object):
         info_str = '{'+ info_str +'}'
         info_json = json.loads(info_str)
 
-        user_basic_info['containerid'] = info_json['common']['containerid']     #containerid
+        user_basic_info['container_id'] = info_json['common']['containerid']     #containerid
         info = json.loads(info_str)['stage']['page'][1]
         user_basic_info['uid'] = info['id']                                         #uid
         user_basic_info['name'] = info['name']                                     #name
@@ -365,7 +365,8 @@ class proxy_manager():
             print("ERROR From proxy_manager: self.__proxy_list.__len__()>self.__proxy_contain_num")
 
     def __get_proxy__(self,num):
-        url='http://vxer.daili666api.com/ip/?tid=557469148308119&num=%s&category=2&foreign=none'%(str(num))
+        # url='http://vxer.daili666api.com/ip/?tid=557469148308119&num=%s&category=2&foreign=none'%(str(num))
+        url='http://dev.kuaidaili.com/api/getproxy/?orderid=954854108893464&num=%s&b_pcchrome=1&b_pcie=1&b_pcff=1&protocol=1&method=1&an_an=1&an_ha=1&sp1=1&sp2=1&quality=0&sort=0&dedup=1&format=text&sep=1'%(str(num))
         try:
             req=request.urlopen(url).read()
             req=str(req,encoding='utf-8')

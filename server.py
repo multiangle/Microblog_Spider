@@ -20,66 +20,73 @@ class Control():
         self.session=Session()
 
         self.init_uid=[]    #待处理的 用户的 id, 在start_up中获得
-        self.start_up()
-        # self.execute()
+        self.create_table()
+        # self.start_up()
+        self.execute()
 
     def __del__(self):
         self.session.close()
 
+    def create_table(self):
+        pass
+
     def start_up(self):    #获取存在数据库中的待处理列表
-        self.init_uid=self.session.query(ready_to_get).all()
+        self.init_uid=self.session.query(ready_to_get).all()[0:5]
         print(self.init_uid)
 
     def execute(self):
         self.conn=WeiboConnector('weilidian@126.com', 'z123456')
         while(True):
-            current_user=self.session.query(ready_to_get).one()
+            current_user=self.session.query(ready_to_get).all()[0]
             uid=current_user.uid
+            # try:
+            info=getInfo(self.conn,uid)
+            save_pickle(info.filtered_attends,'filtered_attends.pkl')
+            save_pickle(info.user_basic_info,'user_basic_info.pkl')
+
+            print('DEBUG: success to get user info')
+            #插入当前用户进入stored_uid
+            stored_uid=[x for x in self.session.query(user_info_table.uid).all()]
+            b_info=info.user_basic_info
+            if b_info['uid'] not in stored_uid:
+                temp_table=user_info_table(uid=b_info['uid'],container_id=b_info['container_id'],basic_page=b_info['basic_page'],
+                                           name=b_info['name'],gender=b_info['gender'],blog_num=b_info['blog_num'],
+                                            description=b_info['description'],fans_num=b_info['fans_num'],attends_num=b_info['attends_num'])
+                try:
+                    self.session.add(temp_table)
+                    self.session.commit()
+                    print('user ',b_info['uid'],' is inserted into user_info_table')
+                except Exception as e:
+                    print(e)
+                    self.session.rollback()
+
+            ready_uid=[x for x in self.session.query(ready_to_get.uid).all()]
+            insert_list=[]
+            current_id=[]
+            for item in info.filtered_attends:
+                if item['uid'] not in ready_uid and item['uid'] not in stored_uid and item['uid'] not in current_id:
+                    current_id.append(item['uid'])
+                    temp_table=ready_to_get(uid=item['uid'],basic_page=item['basic_page'],name=item['name'],gender=item['gender'],blog_num=item['blog_num'],description=item['description'],fans_num=item['fans_num'])
+                    insert_list.append(temp_table)
             try:
-                info=getInfo(self.conn,uid)
-                print('DEBUG: success to get user info')
-                #插入当前用户进入stored_uid
-                stored_uid=[x for x in self.session.query(user_info_table.uid).all()]
-                b_info=info.user_basic_info
-                if b_info['uid'] not in stored_uid:
-                    temp_table=user_info_table(uid=b_info['uid'],container_id=b_info['container_id'],basic_page=b_info['basic_page'],
-                                               name=b_info['name'],gender=b_info['gender'],blog_num=b_info['blog_num'],
-                                               description=b_info['description'],fans_num=b_info['fans_num'],attends_num=b_info['attends_num'])
+                self.session.add_all(insert_list)
+                self.session.commit()
+            except:
+                self.session.rollback()
+                for m in insert_list:
                     try:
-                        self.session.add(temp_table)
+                        self.session.add(m)
                         self.session.commit()
-                        print('user ',b_info['uid'],' is inserted into user_info_table')
-                    except Exception as e:
-                        print(e)
+                    except:
                         self.session.rollback()
 
-                ready_uid=[x for x in self.session.query(ready_to_get.uid).all()]
-                insert_list=[]
-                current_id=[]
-                for item in info.attends:
-                    if item['uid'] not in ready_uid and item['uid'] not in stored_uid and item['uid'] not in current_id:
-                        current_id.append(item['uid'])
-                        temp_table=ready_to_get(uid=item['uid'],basic_page=item['basic_page'],name=item['name'],
-                                                gender=item['gender'],blog_num=item['blog_num'],description=item['description'],
-                                                fans_num=item['fans_num'])
-                        insert_list.append(temp_table)
-                try:
-                    self.session.add_all(insert_list)
-                    self.session.delete(current_user)
-                    self.session.commit()
-                except:
-                    self.session.rollback()
-                    for m in insert_list:
-                        try:
-                            self.session.add(m)
-                            self.session.commit()
-                        except:
-                            self.session.rollback()
+            self.session.delete(current_user)
+            self.session.commit()
 
-                print(insert_list.__len__(),' users is inserted into ready_to_get table')
-            except Exception as e:
-                print('ERROR IN GET USER INFO ',uid)
-                print(e)
+            print(insert_list.__len__(),' users is inserted into ready_to_get table')
+            # except Exception as e:
+            #     print('ERROR IN GET USER INFO ',uid)
+            #     print(e)
 
 
 
